@@ -36,13 +36,25 @@ class _MyHomePageState extends State<MyHomePage> {
       _selectedIndex = index;
     });
   }
-
+  int _hopegoatIndex = 0;
+  final _maxindex = 1;
   void _capture() {}
+  void _skip() {
+    setState(() {
+      if (_hopegoatIndex < _maxindex){
+        _hopegoatIndex += 1;
+      } else {
+        _hopegoatIndex = 0;
+      }
+      
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.lightBlueAccent[100],
+      backgroundColor: Color(0xFFacefff),
+      //Color(0xFFacefff)
       appBar: AppBar(
         backgroundColor: Colors.lightBlueAccent,
         title: Text(widget.title),
@@ -50,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: ListView(
           children: [
-            Image.asset('assets/images/HopeGoat_Placeholder.png'),
+            Image(image: AssetImage('assets/images/HopeGoat_Placeholder${_hopegoatIndex.toString()}.png'),),
             Container(
               margin: EdgeInsets.all(5),
               child: ElevatedButton(
@@ -58,6 +70,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(20),
                   textStyle: TextStyle(fontSize: 20, fontFamily: 'Hopegoat'),
+                  backgroundColor: const Color.fromARGB(255, 241, 255, 147),
+                  //Color(0xFFFE7D7A)
+                  //Color(0xFFD6FBE8)
+                  
                 ),
                 child: Text('Capture'),
               ),
@@ -65,11 +81,13 @@ class _MyHomePageState extends State<MyHomePage> {
             Container(
               margin: EdgeInsets.all(5),
               child: ElevatedButton(
-                onPressed: _capture,
+                onPressed: _skip,
                 style: ElevatedButton.styleFrom(
                   textStyle: TextStyle(fontSize: 12, fontFamily: 'Hopegoat'),
                   padding: const EdgeInsets.all(10),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor: Color.fromARGB(255, 255, 242, 197),
+                  //Color(0xFFFEC3E9),
                 ),
                 child: Text('Skip (3 Left)'),
               ),
