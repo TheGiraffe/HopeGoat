@@ -5,11 +5,20 @@ import 'package:flutter_sanity_image_url/flutter_sanity_image_url.dart';
 import 'package:hopegoat/sanity_image.dart';
 import 'dart:math';
 import 'package:camera/camera.dart';
+import 'dart:async';
 
 final sanityClient = SanityClient(projectId: "t3xfkiht", dataset: "production");
-late List<CameraDescription> _cameras;
 
-void main(){
+List<CameraDescription> cameras = [];
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    cameras = await availableCameras();
+  } on CameraException catch (error) {
+    print(error.code);
+    print(error.description);
+  }
   runApp(const MyApp());
 }
 
@@ -66,8 +75,11 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _showCamera = false;
 
   void _capture() {
-    _showCamera = true;
+    setState(() {
+      _showCamera = !_showCamera;
+    });
   }
+
   void _skip() {
     if (skipCount < maxSkips) {
       setState(() {
@@ -77,11 +89,13 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  int getNewRandIdx(){
+  String frameimgurl = "";
+
+  int getNewRandIdx() {
     Random randomSkip = new Random();
     var newRandIdx = randomSkip.nextInt(_numHopeGoats);
     print(newRandIdx);
-    if (allRandIdxs.contains(newRandIdx)){
+    if (allRandIdxs.contains(newRandIdx)) {
       newRandIdx = getNewRandIdx();
     }
     return newRandIdx;
@@ -89,7 +103,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Color(0xFFacefff),
       //Color(0xFFacefff)
@@ -98,68 +111,135 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: _navIndex == 1 ? (_showCamera == false ? ListView(
-          children: [
-            FutureBuilder(
-              future: fetchHopeGoats(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  if (snapshot.hasError) {
-                    return Center(child: ErrorWidget(snapshot.error!));
-                  }
-                  if (snapshot.hasData) {
-                    var hopegoats = snapshot.data as List;
-                    var promptimgs = hopegoats
-                        .map((e) => SanityImage.fromJson(e["promptimg"]))
-                        .toList();
-                    
-                    if (skip == true) {
-                      randIdx = getNewRandIdx();
-                      allRandIdxs.add(randIdx);
-                      skip = false;
-                      print("SKIP $skipCount COMPLETE");
-                    }
-                    
-                    return (CachedNetworkImage(
-                      imageUrl: urlFor(promptimgs[randIdx]).url(),
-                    ));
-                  }
-                }
-                return const Center(child: CircularProgressIndicator());
-              },
-            ),
+        child: _navIndex == 1
+            ? (_showCamera == false
+                  ? ListView(
+                      children: [
+                        FutureBuilder(
+                          future: fetchHopeGoats(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.done) {
+                              if (snapshot.hasError) {
+                                return Center(
+                                  child: ErrorWidget(snapshot.error!),
+                                );
+                              }
+                              if (snapshot.hasData) {
+                                var hopegoats = snapshot.data as List;
+                                var promptimgs = hopegoats
+                                    .map(
+                                      (hg) =>
+                                          SanityImage.fromJson(hg["promptimg"]),
+                                    )
+                                    .toList();
 
-            Container(
-              margin: EdgeInsets.all(5),
-              child: ElevatedButton(
-                onPressed: _capture,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(20),
-                  textStyle: TextStyle(fontSize: 20, fontFamily: 'Hopegoat'),
-                  backgroundColor: const Color.fromARGB(255, 241, 255, 147),
+                                var frameimgs = hopegoats
+                                    .map(
+                                      (hg) =>
+                                          SanityImage.fromJson(hg["captureframe"]),
+                                    )
+                                    .toList();
 
-                  //Color(0xFFFE7D7A)
-                  //Color(0xFFD6FBE8)
-                ),
-                child: Text('Capture'),
-              ),
-            ),
-            Container(
-              margin: EdgeInsets.all(5),
-              child: ElevatedButton(
-                onPressed: _skip,
-                style: ElevatedButton.styleFrom(
-                  textStyle: TextStyle(fontSize: 12, fontFamily: 'Hopegoat'),
-                  padding: const EdgeInsets.all(10),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  backgroundColor: Color.fromARGB(255, 255, 242, 197),
-                  //Color(0xFFFEC3E9),
-                ),
-                child: Text('Skip (${maxSkips - skipCount} Left)'),
-              ),
-            ),
-          ],
-        ): Stack(children: [],)) : ListView(children: [],),
+                                if (skip == true) {
+                                  randIdx = getNewRandIdx();
+                                  allRandIdxs.add(randIdx);
+                                  skip = false;
+                                  print("SKIP $skipCount COMPLETE");
+                                }
+
+                                frameimgurl = urlFor(
+                                    frameimgs[randIdx],
+                                  ).url();
+                                
+
+                                return (CachedNetworkImage(
+                                  imageUrl: urlFor(promptimgs[randIdx]).url(),
+                                ));
+                              }
+                            }
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        ),
+
+                        Container(
+                          margin: EdgeInsets.all(5),
+                          child: ElevatedButton(
+                            onPressed: _capture,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.all(20),
+                              textStyle: TextStyle(
+                                fontSize: 20,
+                                fontFamily: 'Hopegoat',
+                              ),
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                241,
+                                255,
+                                147,
+                              ),
+
+                              //Color(0xFFFE7D7A)
+                              //Color(0xFFD6FBE8)
+                            ),
+                            child: Text('Capture'),
+                          ),
+                        ),
+                        Container(
+                          margin: EdgeInsets.all(5),
+                          child: ElevatedButton(
+                            onPressed: _skip,
+                            style: ElevatedButton.styleFrom(
+                              textStyle: TextStyle(
+                                fontSize: 12,
+                                fontFamily: 'Hopegoat',
+                              ),
+                              padding: const EdgeInsets.all(10),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              backgroundColor: Color.fromARGB(
+                                255,
+                                255,
+                                242,
+                                197,
+                              ),
+                              //Color(0xFFFEC3E9),
+                            ),
+                            child: Text('Skip (${maxSkips - skipCount} Left)'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView(
+                      children: [
+                        CapturingScreen(camera: cameras.first, frameURL: frameimgurl),
+                        Container(
+                          margin: EdgeInsets.all(5),
+                          child: ElevatedButton(
+                            onPressed: _capture,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.all(15),
+                              textStyle: TextStyle(
+                                fontSize: 15,
+                                fontFamily: 'Hopegoat',
+                              ),
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                241,
+                                255,
+                                147,
+                              ),
+
+                              //Color(0xFFFE7D7A)
+                              //Color(0xFFD6FBE8)
+                            ),
+                            child: Text('Done'),
+                          ),
+                        ),
+                      ],
+                    ))
+            : ListView(children: []),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.lightBlueAccent,
@@ -176,5 +256,54 @@ class _MyHomePageState extends State<MyHomePage> {
         onTap: _onNavItemTapped,
       ),
     );
+  }
+}
+
+class CapturingScreen extends StatefulWidget {
+  const CapturingScreen({super.key, required this.camera, required this.frameURL});
+  final CameraDescription camera;
+  final String frameURL;
+
+  @override
+  CapturingScreenState createState() => CapturingScreenState();
+}
+
+class CapturingScreenState extends State<CapturingScreen> {
+  late CameraController _controller;
+  late Future<void> _initializeControllerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    _initializeControllerFuture = _controller.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return (Stack(
+      children: [
+        FutureBuilder<void>(
+          future: _initializeControllerFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return (AspectRatio(
+                aspectRatio: 4 / 5,
+                child: CameraPreview(_controller),
+              ));
+            } else {
+              return const Center(child: CircularProgressIndicator());
+            }
+          },
+        ),
+        CachedNetworkImage(imageUrl: widget.frameURL),
+      ],
+    ));
   }
 }
