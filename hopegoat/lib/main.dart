@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_sanity/flutter_sanity.dart';
+import 'package:flutter_sanity_image_url/flutter_sanity_image_url.dart';
+import 'package:hopegoat/sanity_image.dart';
+import 'dart:math';
+import 'package:camera/camera.dart';
 
-void main() {
+final sanityClient = SanityClient(projectId: "t3xfkiht", dataset: "production");
+late List<CameraDescription> _cameras;
+
+void main(){
   runApp(const MyApp());
 }
 
@@ -21,6 +30,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
+int _numHopeGoats = 0;
+
+Random random = new Random();
+var randIdx = random.nextInt(_numHopeGoats);
+List allRandIdxs = [randIdx];
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
   final String title;
@@ -30,28 +45,51 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
-  void _onItemTapped(int index) {
+  int _navIndex = 1;
+  void _onNavItemTapped(int index) {
     setState(() {
-      _selectedIndex = index;
+      _navIndex = index;
     });
   }
-  int _hopegoatIndex = 0;
-  final _maxindex = 1;
-  void _capture() {}
+
+  Future<dynamic> fetchHopeGoats() async {
+    var query = r"*[_type=='hopegoat']";
+    var response = await sanityClient.fetch(query);
+    _numHopeGoats = response.length;
+    return Future.value(response);
+  }
+
+  int skipCount = 0;
+  var skip = false;
+  int maxSkips = 3;
+
+  bool _showCamera = false;
+
+  void _capture() {
+    _showCamera = true;
+  }
   void _skip() {
-    setState(() {
-      if (_hopegoatIndex < _maxindex){
-        _hopegoatIndex += 1;
-      } else {
-        _hopegoatIndex = 0;
-      }
-      
-    });
+    if (skipCount < maxSkips) {
+      setState(() {
+        skip = true;
+        skipCount = skipCount + 1;
+      });
+    }
+  }
+
+  int getNewRandIdx(){
+    Random randomSkip = new Random();
+    var newRandIdx = randomSkip.nextInt(_numHopeGoats);
+    print(newRandIdx);
+    if (allRandIdxs.contains(newRandIdx)){
+      newRandIdx = getNewRandIdx();
+    }
+    return newRandIdx;
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: Color(0xFFacefff),
       //Color(0xFFacefff)
@@ -60,9 +98,37 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: ListView(
+        child: _navIndex == 1 ? (_showCamera == false ? ListView(
           children: [
-            Image(image: AssetImage('assets/images/HopeGoat_Placeholder${_hopegoatIndex.toString()}.png'),),
+            FutureBuilder(
+              future: fetchHopeGoats(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.hasError) {
+                    return Center(child: ErrorWidget(snapshot.error!));
+                  }
+                  if (snapshot.hasData) {
+                    var hopegoats = snapshot.data as List;
+                    var promptimgs = hopegoats
+                        .map((e) => SanityImage.fromJson(e["promptimg"]))
+                        .toList();
+                    
+                    if (skip == true) {
+                      randIdx = getNewRandIdx();
+                      allRandIdxs.add(randIdx);
+                      skip = false;
+                      print("SKIP $skipCount COMPLETE");
+                    }
+                    
+                    return (CachedNetworkImage(
+                      imageUrl: urlFor(promptimgs[randIdx]).url(),
+                    ));
+                  }
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+            ),
+
             Container(
               margin: EdgeInsets.all(5),
               child: ElevatedButton(
@@ -71,9 +137,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.all(20),
                   textStyle: TextStyle(fontSize: 20, fontFamily: 'Hopegoat'),
                   backgroundColor: const Color.fromARGB(255, 241, 255, 147),
+
                   //Color(0xFFFE7D7A)
                   //Color(0xFFD6FBE8)
-                  
                 ),
                 child: Text('Capture'),
               ),
@@ -89,11 +155,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   backgroundColor: Color.fromARGB(255, 255, 242, 197),
                   //Color(0xFFFEC3E9),
                 ),
-                child: Text('Skip (3 Left)'),
+                child: Text('Skip (${maxSkips - skipCount} Left)'),
               ),
             ),
           ],
-        ),
+        ): Stack(children: [],)) : ListView(children: [],),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.lightBlueAccent,
@@ -105,9 +171,9 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Tutorial'),
         ],
-        currentIndex: _selectedIndex,
+        currentIndex: _navIndex,
         selectedItemColor: Colors.lightBlue[900],
-        onTap: _onItemTapped,
+        onTap: _onNavItemTapped,
       ),
     );
   }
