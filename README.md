@@ -1,7 +1,10 @@
 # HopeGoat
-Something to replace my doomscrolling tendencies...
+Welcome to the Github Repo for HopeGoat! I hope you enjoy visiting!.
 
-## Flutter Resources To Refer Back To:
-- [Flutter: Merge two images and store it in local storage as a single image](https://stackoverflow.com/questions/59611736/flutter-merge-two-images-and-store-it-in-local-storage-as-a-single-image)
-- [Camera Plugin](https://pub.dev/packages/camera)
-- [Picture Using Camera Example](https://docs.flutter.dev/cookbook/plugins/picture-using-camera)
+## Something to replace my doomscrolling tendencies...
+
+Do you ever find yourself stuck passively doomscrolling for hours? For me, it’s been a recurring experience that’s left me overwhelmed, anxious, low-energy, and worse-off personally and financially. 
+
+I wanted to build something that instead promotes creativity and self-reflection over mindless consumption, and encourages me to go interact with the world instead of avoiding it. Despite all the chaos, I believe the world is a beautiful place worth being “present” in and experiencing.
+
+Mahalo nui for joining me on this journey, and I hope this app helps you challenge yourself to create, connect, and regain control over your attention - our most precious resource in this world!
